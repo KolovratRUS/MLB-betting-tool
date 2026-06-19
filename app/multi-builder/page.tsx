@@ -120,11 +120,14 @@ export default function MultiBuilder() {
                 return (
                 <div key={idx} className="bg-gray-800 border border-gray-700 rounded-lg p-4 hover:border-gray-600 transition-colors">
                   <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="text-sm font-bold text-white">{combo.games[0].awayTeam} + {combo.games[1].awayTeam}</div>
-                      <div className="text-xs text-gray-400 mt-1">{combo.games[0].thresholds[key]}% • {combo.games[1].thresholds[key]}%</div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-bold text-white">
+                        <div>{combo.games[0].awayTeam} @ {combo.games[0].homeTeam}</div>
+                        <div className="text-xs text-gray-400 mt-1">{combo.games[1].awayTeam} @ {combo.games[1].homeTeam}</div>
+                      </div>
+                      <div className="text-xs text-gray-400 mt-2">{combo.games[0].thresholds[key]}% • {combo.games[1].thresholds[key]}%</div>
                     </div>
-                    <div className="text-right ml-4">
+                    <div className="text-right ml-4 flex-shrink-0">
                       <div className="text-2xl font-black text-green-400">{combo.hitRate}%</div>
                     </div>
                   </div>
@@ -141,8 +144,14 @@ export default function MultiBuilder() {
               {threeLegCombos.map((combo, idx) => (
                 <div key={idx} className="bg-gray-800 border border-gray-700 rounded-lg p-4 hover:border-gray-600 transition-colors">
                   <div className="flex items-center justify-between">
-                    <div className="text-sm font-bold text-white">{combo.games[0].awayTeam} + {combo.games[1].awayTeam} + {combo.games[2].awayTeam}</div>
-                    <div className="text-2xl font-black text-green-400 ml-4">{combo.hitRate}%</div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-xs font-bold text-white space-y-1">
+                        <div>{combo.games[0].awayTeam} @ {combo.games[0].homeTeam}</div>
+                        <div>{combo.games[1].awayTeam} @ {combo.games[1].homeTeam}</div>
+                        <div>{combo.games[2].awayTeam} @ {combo.games[2].homeTeam}</div>
+                      </div>
+                    </div>
+                    <div className="text-2xl font-black text-green-400 ml-4 flex-shrink-0">{combo.hitRate}%</div>
                   </div>
                 </div>
               ))}

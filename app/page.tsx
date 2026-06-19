@@ -1,25 +1,44 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import GameCard from '@/components/GameCard';
-import { mockGames, Game } from '@/lib/mockData';
+import { Game } from '@/lib/mockData';
 
 type Threshold = 'all' | 'over55' | 'over65' | 'over75' | 'over85';
 
 export default function Dashboard() {
   const [selectedThreshold, setSelectedThreshold] = useState<Threshold>('all');
+  const [games, setGames] = useState<Game[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch games from API on mount
+  useEffect(() => {
+    async function fetchGames() {
+      try {
+        const response = await fetch('/api/games/today');
+        const data = await response.json();
+        setGames(data);
+      } catch (error) {
+        console.error('Failed to fetch games:', error);
+        setGames([]);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchGames();
+  }, []);
 
   const sortedGames = useMemo(() => {
     if (selectedThreshold === 'all') {
-      return [...mockGames].sort((a, b) => b.runScore - a.runScore);
+      return [...games].sort((a, b) => b.runScore - a.runScore);
     }
 
     const thresholdKey = selectedThreshold as keyof Game['thresholds'];
-    return [...mockGames].sort(
+    return [...games].sort(
       (a, b) => b.thresholds[thresholdKey] - a.thresholds[thresholdKey]
     );
-  }, [selectedThreshold]);
+  }, [selectedThreshold, games]);
 
   const today = new Date();
   const dateStr = today.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
@@ -30,7 +49,7 @@ export default function Dashboard() {
         {/* Header */}
         <div className="mb-6">
           <h1 className="text-3xl font-black text-white mb-1">MLB Run Screening</h1>
-          <p className="text-gray-400 text-sm">Over {sortedGames.length} games • Live odds</p>
+          <p className="text-gray-400 text-sm">{loading ? 'Loading...' : `${sortedGames.length} games • Updated from MLB data`}</p>
         </div>
 
         {/* Threshold Filters */}
@@ -76,9 +95,15 @@ export default function Dashboard() {
 
         {/* Games List */}
         <div className="space-y-4">
-          {sortedGames.map((game, index) => (
-            <GameCard key={game.id} game={game} rank={index + 1} highlightedThreshold={selectedThreshold} />
-          ))}
+          {loading ? (
+            <div className="text-center text-gray-400 py-8">Loading games...</div>
+          ) : sortedGames.length === 0 ? (
+            <div className="text-center text-gray-400 py-8">No games found for today</div>
+          ) : (
+            sortedGames.map((game, index) => (
+              <GameCard key={game.id} game={game} rank={index + 1} highlightedThreshold={selectedThreshold} />
+            ))
+          )}
         </div>
       </div>
     </div>

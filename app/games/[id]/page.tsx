@@ -1,7 +1,6 @@
-'use client';
-
 import Link from 'next/link';
-import { mockGames } from '@/lib/mockData';
+import { getGameById } from '@/lib/gameData';
+import { Game } from '@/lib/mockData';
 
 interface MatchupPageProps {
   params: Promise<{
@@ -11,7 +10,9 @@ interface MatchupPageProps {
 
 export default async function MatchupAnalysis({ params }: MatchupPageProps) {
   const { id } = await params;
-  const game = mockGames.find((g) => g.id === id);
+  
+  // Fetch game directly from shared function
+  const game = await getGameById(id);
 
   if (!game) {
     return (
