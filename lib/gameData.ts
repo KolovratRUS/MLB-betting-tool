@@ -7,6 +7,7 @@ import { getSchedule } from './mlbApi';
 import { transformScheduleGames } from './mlbTransform';
 import { mockGames, Game } from './mockData';
 import { calculateSeasonOversPerformance } from './scoringHelpers';
+import { calculateLast30GamesTrend } from './scoringHelpers';
 
 /**
  * Get all games for today with real schedule + mock scores blended
@@ -53,6 +54,9 @@ export async function getTodayGames(): Promise<Game[]> {
       // Calculate Season Overs performance from real team stats (always, even with fallback)
       const seasonOversScore = calculateSeasonOversPerformance(fullGame);
       
+      // Calculate Last 30 Games trend from real team stats (always, even with fallback)
+      const last30GamesScore = calculateLast30GamesTrend(fullGame);
+      
       // Log for verification
       console.log(
         `[gameData] ${fullGame.homeTeam} @ ${fullGame.awayTeam}: ` +
@@ -60,11 +64,18 @@ export async function getTodayGames(): Promise<Game[]> {
         `final scoringBreakdown.seasonOversPerformance=${seasonOversScore}`
       );
       
+      console.log(
+        `[gameData] ${fullGame.homeTeam} @ ${fullGame.awayTeam}: ` +
+        `calculated last30GamesTrend=${last30GamesScore}, ` +
+        `final scoringBreakdown.last30GamesTrend=${last30GamesScore}`
+      );
+      
       return {
         ...fullGame,
         scoringBreakdown: {
           ...fullGame.scoringBreakdown,
           seasonOversPerformance: seasonOversScore,
+          last30GamesTrend: last30GamesScore,
         },
       };
     });
