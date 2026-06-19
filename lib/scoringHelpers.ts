@@ -339,57 +339,58 @@ export function calculateOtherFactors(game: Game): number {
 }
 
 /**
- * Calculate bullpen quality score from team OVER-RATE percentages.
+ * Calculate bullpen quality score from real relief-pitcher (bullpen) ERA.
  *
- * TEMPORARY PROXY: until true bullpen-only stats are wired in, the team
- * `oversRate` percentage is used as a stand-in for bullpen/pitching quality.
- * Inputs are therefore PERCENTAGES (0-100), NOT ERA values.
+ * Inputs are bullpen ERA values (relief-only season ERA, with a whole-staff
+ * team-ERA fallback handled upstream) — NOT over-rate percentages. This makes
+ * the factor independent of `oversRate`, so it no longer double-counts the
+ * Season Overs factor.
  *
- * Higher over-rate (more games go over) → higher score (more over-friendly).
- * Lower over-rate → lower score (less over-friendly).
+ * Higher bullpen ERA (worse relief) → higher over-friendly score.
+ * Lower bullpen ERA (better relief)  → lower score.
  *
  * Linear interpolation between these calibration points:
- *   <= 30% → 35
- *      35% → 50
- *      40% → 65
- *      45% → 80
- *   >= 50% → 95
+ *   ERA <= 3.00 → 25
+ *   ERA   3.50 → 40
+ *   ERA   4.00 → 60
+ *   ERA   4.50 → 78
+ *   ERA >= 5.00 → 95
  *
- * @param homeTeamOverRate Home team over-rate percentage (0-100), or null
- * @param awayTeamOverRate Away team over-rate percentage (0-100), or null
+ * @param homeBullpenEra Home team bullpen ERA, or null if unavailable
+ * @param awayBullpenEra Away team bullpen ERA, or null if unavailable
  * @returns Bullpen quality score (0-100)
  */
 export function calculateBullpenQuality(
-  homeTeamOverRate: number | null,
-  awayTeamOverRate: number | null
+  homeBullpenEra: number | null,
+  awayBullpenEra: number | null
 ): number {
-  // Neutral default (~38% over-rate maps to a mid-range score) when data missing.
-  const defaultOverRate = 38;
-  const homeRate = homeTeamOverRate ?? defaultOverRate;
-  const awayRate = awayTeamOverRate ?? defaultOverRate;
+  // Neutral default ERA (3.75 maps to a mid-range score of ~50) when data missing.
+  const defaultEra = 3.75;
+  const homeEra = homeBullpenEra ?? defaultEra;
+  const awayEra = awayBullpenEra ?? defaultEra;
 
-  // Combined over-rate (average of both teams)
-  const combinedOverRate = (homeRate + awayRate) / 2;
+  // Combined bullpen ERA (average of both teams)
+  const combinedEra = (homeEra + awayEra) / 2;
 
-  // Map combined over-rate percentage to score using linear interpolation
+  // Map combined ERA to score using linear interpolation
   let score: number;
 
-  if (combinedOverRate <= 30) {
-    score = 35;
-  } else if (combinedOverRate <= 35) {
-    // Interpolate between 30% (35) and 35% (50)
-    score = 35 + ((combinedOverRate - 30) / 5) * (50 - 35);
-  } else if (combinedOverRate <= 40) {
-    // Interpolate between 35% (50) and 40% (65)
-    score = 50 + ((combinedOverRate - 35) / 5) * (65 - 50);
-  } else if (combinedOverRate <= 45) {
-    // Interpolate between 40% (65) and 45% (80)
-    score = 65 + ((combinedOverRate - 40) / 5) * (80 - 65);
-  } else if (combinedOverRate <= 50) {
-    // Interpolate between 45% (80) and 50% (95)
-    score = 80 + ((combinedOverRate - 45) / 5) * (95 - 80);
+  if (combinedEra <= 3.0) {
+    score = 25;
+  } else if (combinedEra <= 3.5) {
+    // Interpolate between 3.00 (25) and 3.50 (40)
+    score = 25 + ((combinedEra - 3.0) / 0.5) * (40 - 25);
+  } else if (combinedEra <= 4.0) {
+    // Interpolate between 3.50 (40) and 4.00 (60)
+    score = 40 + ((combinedEra - 3.5) / 0.5) * (60 - 40);
+  } else if (combinedEra <= 4.5) {
+    // Interpolate between 4.00 (60) and 4.50 (78)
+    score = 60 + ((combinedEra - 4.0) / 0.5) * (78 - 60);
+  } else if (combinedEra <= 5.0) {
+    // Interpolate between 4.50 (78) and 5.00 (95)
+    score = 78 + ((combinedEra - 4.5) / 0.5) * (95 - 78);
   } else {
-    // 50%+ over-rate caps at 95
+    // ERA 5.00+ caps at 95
     score = 95;
   }
 
@@ -397,8 +398,8 @@ export function calculateBullpenQuality(
 
   // Log for verification
   console.log(
-    `[bullpen] homeRate=${homeRate}%, awayRate=${awayRate}%, ` +
-    `combinedRate=${combinedOverRate.toFixed(1)}%, bullpenScore=${roundedScore} (over-rate proxy)`
+    `[bullpen] homeBullpenEra=${homeBullpenEra ?? 'N/A'}, awayBullpenEra=${awayBullpenEra ?? 'N/A'}, ` +
+    `combinedEra=${combinedEra.toFixed(2)}, bullpenScore=${roundedScore}`
   );
 
   return roundedScore;

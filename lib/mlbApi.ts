@@ -176,6 +176,83 @@ export async function getTeamGameResults(teamId: number, season?: number): Promi
 }
 
 /**
+ * Parse an ERA value from the MLB API (which returns ERA as a string).
+ * Non-numeric placeholders ("-.--", "INF", "*.**", "") become null.
+ */
+function parseEra(raw: any): number | null {
+  if (raw === undefined || raw === null || raw === '') {
+    return null;
+  }
+  const era = parseFloat(raw);
+  return Number.isFinite(era) ? era : null;
+}
+
+/**
+ * Fetch a team's bullpen (relief-pitcher) season ERA, pre-game.
+ *
+ * Primary source — relief-only split (bullpen-specific):
+ *   /teams/{id}/stats?stats=statSplits&group=pitching&sitCodes=rp
+ *   path: stats[0].splits[] where split.code === 'rp' -> stat.era
+ * Fallback — whole-staff team pitching ERA (includes starters):
+ *   /teams/{id}/stats?stats=season&group=pitching
+ *   path: stats[0].splits[0].stat.era
+ *
+ * @param teamId MLB team ID
+ * @returns { era, source } where source is 'rp' | 'whole-staff' | 'unavailable'
+ */
+export async function getTeamBullpenEra(
+  teamId: number
+): Promise<{ era: number | null; source: 'rp' | 'whole-staff' | 'unavailable' }> {
+  const season = new Date().getFullYear();
+
+  // 1) Preferred: relief-only (bullpen-specific) ERA
+  try {
+    const response = await fetch(
+      `${MLB_API_BASE}/teams/${teamId}/stats?stats=statSplits&group=pitching&sitCodes=rp&season=${season}`,
+      { next: { revalidate: 3600 } } // Cache for 1 hour
+    );
+    if (response.ok) {
+      const data: any = await response.json();
+      const splits = data?.stats?.[0]?.splits || [];
+      const rp = splits.find((s: any) => s?.split?.code === 'rp');
+      const era = parseEra(rp?.stat?.era);
+      if (era !== null) {
+        console.log(`[bullpenEra] teamId=${teamId}: era=${era}, source=rp`);
+        return { era, source: 'rp' };
+      }
+    } else {
+      console.error(`[MLB API] Bullpen rp split error for ${teamId}: ${response.status}`);
+    }
+  } catch (error) {
+    console.error(`[MLB API] Bullpen rp split error for ${teamId}:`, error);
+  }
+
+  // 2) Fallback: whole-staff team pitching ERA
+  try {
+    const response = await fetch(
+      `${MLB_API_BASE}/teams/${teamId}/stats?stats=season&group=pitching&season=${season}`,
+      { next: { revalidate: 3600 } } // Cache for 1 hour
+    );
+    if (response.ok) {
+      const data: any = await response.json();
+      const era = parseEra(data?.stats?.[0]?.splits?.[0]?.stat?.era);
+      if (era !== null) {
+        console.log(`[bullpenEra] teamId=${teamId}: era=${era}, source=whole-staff (rp unavailable)`);
+        return { era, source: 'whole-staff' };
+      }
+    } else {
+      console.error(`[MLB API] Whole-staff pitching error for ${teamId}: ${response.status}`);
+    }
+  } catch (error) {
+    console.error(`[MLB API] Whole-staff pitching error for ${teamId}:`, error);
+  }
+
+  // 3) Both failed
+  console.log(`[bullpenEra] teamId=${teamId}: era=N/A, source=unavailable`);
+  return { era: null, source: 'unavailable' };
+}
+
+/**
  * Fetch a pitcher's current-season ERA by player ID.
  *
  * Endpoint: /people/{id}/stats?stats=season&group=pitching

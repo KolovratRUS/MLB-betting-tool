@@ -69,25 +69,15 @@ export async function getTodayGames(): Promise<Game[]> {
       // Use ?? so a genuine 0.00 ERA is preserved; null (unavailable) yields the neutral default inside the helper
       const pitcherScore = calculatePitcherPerformance(fullGame.homePitcher?.era ?? null, fullGame.awayPitcher?.era ?? null);
       
-      // Calculate bullpen quality from team pitching stats
-      // Using oversRate as a proxy for team pitching quality
-      // oversRate is calculated from over55/over65/over75/over85 rates which reflect pitching performance
-      const homeTeamPitchingQuality = fullGame.homeTeamStats?.oversRate || 50;
-      const awayTeamPitchingQuality = fullGame.awayTeamStats?.oversRate || 50;
-      
-      const bullpenScore = calculateBullpenQuality(homeTeamPitchingQuality, awayTeamPitchingQuality);
+      // Calculate bullpen quality from real relief-pitcher (bullpen) season ERA.
+      // Independent of oversRate, so it no longer double-counts Season Overs.
+      const homeBullpenEra = fullGame.homeBullpenEra ?? null;
+      const awayBullpenEra = fullGame.awayBullpenEra ?? null;
+      const bullpenScore = calculateBullpenQuality(homeBullpenEra, awayBullpenEra);
 
       // Calculate Other Factors from the ballpark run environment (park/environment proxy)
       const otherFactorsScore = calculateOtherFactors(fullGame);
 
-      // Log bullpen calculation for verification
-      console.log(
-        `[bullpen] ${fullGame.homeTeam} vs ${fullGame.awayTeam}: ` +
-        `Home pitching quality=${homeTeamPitchingQuality}, ` +
-        `Away pitching quality=${awayTeamPitchingQuality}, ` +
-        `Combined score=${bullpenScore}`
-      );
-      
       // Calculate the overall Run Score as a weighted blend of the five factors
       const realRunScore = calculateRunScore({
         seasonOversPerformance: seasonOversScore,

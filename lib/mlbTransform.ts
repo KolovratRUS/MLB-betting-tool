@@ -3,7 +3,7 @@
  */
 
 import { Game } from './mockData';
-import { MLBGame, getTeamIdByName, getPitcherSeasonEra } from './mlbApi';
+import { MLBGame, getTeamIdByName, getPitcherSeasonEra, getTeamBullpenEra } from './mlbApi';
 import { getTeamStatsById } from './teamStats';
 
 /**
@@ -150,6 +150,12 @@ export async function transformScheduleGames(
         extractPitcherData(mlbGame.teams.away.probablePitcher, 'away'),
       ]);
 
+      // Fetch real bullpen (relief) ERA for both teams (rp split, whole-staff fallback)
+      const [homeBullpen, awayBullpen] = await Promise.all([
+        homeTeamId ? getTeamBullpenEra(homeTeamId) : Promise.resolve({ era: null, source: 'unavailable' as const }),
+        awayTeamId ? getTeamBullpenEra(awayTeamId) : Promise.resolve({ era: null, source: 'unavailable' as const }),
+      ]);
+
       // Log extracted pitcher data for verification
       console.log(
         `[pitchers] ${awayTeamName} @ ${homeTeamName}: ` +
@@ -165,6 +171,8 @@ export async function transformScheduleGames(
           homeTeamStats: homeTeamStats || mockGame?.homeTeamStats,
           awayTeamStats: awayTeamStats || mockGame?.awayTeamStats,
           scoringBreakdown: mockGame?.scoringBreakdown,
+          homeBullpenEra: homeBullpen.era,
+          awayBullpenEra: awayBullpen.era,
         },
         {
           home: homePitcher,

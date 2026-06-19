@@ -36,6 +36,9 @@ export interface Game {
     name: string;
     era: number | null; // null = ERA unavailable (display "N/A")
   };
+  // Real relief-pitcher (bullpen) season ERA; null = unavailable (neutral score)
+  homeBullpenEra?: number | null;
+  awayBullpenEra?: number | null;
   scoringBreakdown: {
     seasonOversPerformance: number;
     last30GamesTrend: number;
