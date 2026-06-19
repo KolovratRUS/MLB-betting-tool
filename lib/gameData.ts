@@ -8,6 +8,7 @@ import { transformScheduleGames } from './mlbTransform';
 import { mockGames, Game } from './mockData';
 import { calculateSeasonOversPerformance } from './scoringHelpers';
 import { calculateLast30GamesTrend } from './scoringHelpers';
+import { calculateThresholds } from './scoringHelpers';
 
 /**
  * Get all games for today with real schedule + mock scores blended
@@ -51,27 +52,18 @@ export async function getTodayGames(): Promise<Game[]> {
       // Cast to Game type with all required fields for calculation
       const fullGame = game as Game;
       
+      // Calculate real thresholds from team stats
+      const realThresholds = calculateThresholds(fullGame);
+      
       // Calculate Season Overs performance from real team stats (always, even with fallback)
       const seasonOversScore = calculateSeasonOversPerformance(fullGame);
       
       // Calculate Last 30 Games trend from real team stats (always, even with fallback)
       const last30GamesScore = calculateLast30GamesTrend(fullGame);
       
-      // Log for verification
-      console.log(
-        `[gameData] ${fullGame.homeTeam} @ ${fullGame.awayTeam}: ` +
-        `calculated seasonOversPerformance=${seasonOversScore}, ` +
-        `final scoringBreakdown.seasonOversPerformance=${seasonOversScore}`
-      );
-      
-      console.log(
-        `[gameData] ${fullGame.homeTeam} @ ${fullGame.awayTeam}: ` +
-        `calculated last30GamesTrend=${last30GamesScore}, ` +
-        `final scoringBreakdown.last30GamesTrend=${last30GamesScore}`
-      );
-      
       return {
         ...fullGame,
+        thresholds: realThresholds,
         scoringBreakdown: {
           ...fullGame.scoringBreakdown,
           seasonOversPerformance: seasonOversScore,

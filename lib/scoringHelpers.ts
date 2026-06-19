@@ -108,3 +108,35 @@ export function calculateLast30GamesTrend(game: Game): number {
 
   return roundedScore;
 }
+
+/**
+ * Calculate real threshold values from team over-rate statistics
+ * 
+ * Uses weighted average of home (55%) and away (45%) team rates for each threshold.
+ * 
+ * @param game Game object containing team stats
+ * @returns Calculated threshold values (O5.5, O6.5, O7.5, O8.5)
+ */
+export function calculateThresholds(game: Game): {
+  over55: number;
+  over65: number;
+  over75: number;
+  over85: number;
+} {
+  const homeStats = game.homeTeamStats;
+  const awayStats = game.awayTeamStats;
+
+  // Calculate weighted average for each threshold (55% home, 45% away)
+  const over55 = Math.round((homeStats.over55Rate * 0.55) + (awayStats.over55Rate * 0.45));
+  const over65 = Math.round((homeStats.over65Rate * 0.55) + (awayStats.over65Rate * 0.45));
+  const over75 = Math.round((homeStats.over75Rate * 0.55) + (awayStats.over75Rate * 0.45));
+  const over85 = Math.round((homeStats.over85Rate * 0.55) + (awayStats.over85Rate * 0.45));
+
+  // Log for verification
+  console.log(
+    `[thresholds] ${game.homeTeam} vs ${game.awayTeam}: ` +
+    `O5.5=${over55}, O6.5=${over65}, O7.5=${over75}, O8.5=${over85}`
+  );
+
+  return { over55, over65, over75, over85 };
+}
