@@ -197,6 +197,91 @@ export function calculatePitcherPerformance(homeEra: number | null, awayEra: num
 }
 
 /**
+ * Ballpark run-environment scores (0-100) — PARK/ENVIRONMENT PROXY.
+ *
+ * IMPORTANT: This is a PARK / RUN-ENVIRONMENT PROXY, not a live weather feed
+ * or current-season Statcast park-factor API. Each MLB ballpark is assigned a
+ * static score derived from publicly known historical run-scoring tendencies
+ * (think of ~50 as league-neutral run scoring):
+ *   - Hitter-friendly parks (Coors Field) score high  -> more runs / over-friendly
+ *   - Pitcher-friendly parks (Oracle Park, Petco)      score low
+ *   - Neutral parks land in roughly the 50-65 band
+ *
+ * The ballpark is identified by the HOME team, which is always available from
+ * the MLB schedule (no extra/paid API call needed). Keys are matched as
+ * case-insensitive substrings of the home team name, so both the full MLB API
+ * name ("Colorado Rockies") and the short mock name ("Rockies") resolve.
+ */
+const PARK_ENVIRONMENT: Array<{ keyword: string; park: string; score: number }> = [
+  // Strong hitter's parks
+  { keyword: 'rockies', park: 'Coors Field', score: 95 },
+  { keyword: 'reds', park: 'Great American Ball Park', score: 70 },
+  { keyword: 'red sox', park: 'Fenway Park', score: 67 },
+  { keyword: 'orioles', park: 'Oriole Park at Camden Yards', score: 65 },
+  { keyword: 'phillies', park: 'Citizens Bank Park', score: 64 },
+  // Mildly hitter-leaning
+  { keyword: 'royals', park: 'Kauffman Stadium', score: 60 },
+  { keyword: 'rangers', park: 'Globe Life Field', score: 60 },
+  { keyword: 'diamondbacks', park: 'Chase Field', score: 60 },
+  { keyword: 'yankees', park: 'Yankee Stadium', score: 60 },
+  { keyword: 'cubs', park: 'Wrigley Field', score: 58 },
+  { keyword: 'braves', park: 'Truist Park', score: 58 },
+  { keyword: 'blue jays', park: 'Rogers Centre', score: 57 },
+  { keyword: 'brewers', park: 'American Family Field', score: 56 },
+  { keyword: 'white sox', park: 'Rate Field', score: 56 },
+  // Roughly neutral
+  { keyword: 'nationals', park: 'Nationals Park', score: 55 },
+  { keyword: 'twins', park: 'Target Field', score: 55 },
+  { keyword: 'astros', park: 'Daikin Park', score: 55 },
+  { keyword: 'cardinals', park: 'Busch Stadium', score: 53 },
+  { keyword: 'angels', park: 'Angel Stadium', score: 52 },
+  { keyword: 'mets', park: 'Citi Field', score: 51 },
+  { keyword: 'dodgers', park: 'Dodger Stadium', score: 50 },
+  { keyword: 'rays', park: 'Tropicana Field', score: 50 },
+  { keyword: 'guardians', park: 'Progressive Field', score: 50 },
+  { keyword: 'athletics', park: 'Sutter Health Park', score: 50 },
+  // Pitcher-leaning
+  { keyword: 'tigers', park: 'Comerica Park', score: 49 },
+  { keyword: 'pirates', park: 'PNC Park', score: 48 },
+  { keyword: 'marlins', park: 'loanDepot park', score: 47 },
+  { keyword: 'padres', park: 'Petco Park', score: 45 },
+  { keyword: 'giants', park: 'Oracle Park', score: 44 },
+  { keyword: 'mariners', park: 'T-Mobile Park', score: 44 },
+];
+
+/** Score used when the home team's ballpark is unknown (treated as neutral). */
+const NEUTRAL_PARK_SCORE = 55;
+
+/**
+ * Calculate the "Other Factors" score (Step 8) from the ballpark run environment.
+ *
+ * Replaces the former mock `otherFactors` value with a real, pre-game-derived
+ * park/environment proxy. The ballpark is determined by the home team. Higher
+ * score = more run-friendly environment (over-leaning); lower = pitcher-friendly.
+ *
+ * See PARK_ENVIRONMENT for the proxy nature and what remains approximate
+ * (no live weather, static historical factors).
+ *
+ * @param game Game object (uses game.homeTeam to identify the ballpark)
+ * @returns Park/environment score (0-100)
+ */
+export function calculateOtherFactors(game: Game): number {
+  const home = (game.homeTeam || '').toLowerCase();
+  const match = PARK_ENVIRONMENT.find((p) => home.includes(p.keyword));
+
+  const score = match ? match.score : NEUTRAL_PARK_SCORE;
+  const parkName = match ? match.park : 'Unknown park (neutral default)';
+
+  // Log for verification
+  console.log(
+    `[otherFactors] ${game.awayTeam} @ ${game.homeTeam}: ` +
+    `park=${parkName}, environmentScore=${score} (park/environment proxy)`
+  );
+
+  return score;
+}
+
+/**
  * Calculate bullpen quality score from team pitching ERA
  * 
  * Note: This uses team overall pitching ERA as a proxy for bullpen quality.

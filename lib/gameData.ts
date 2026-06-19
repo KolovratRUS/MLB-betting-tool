@@ -11,6 +11,7 @@ import { calculateLast30GamesTrend } from './scoringHelpers';
 import { calculateThresholds } from './scoringHelpers';
 import { calculatePitcherPerformance } from './scoringHelpers';
 import { calculateBullpenQuality } from './scoringHelpers';
+import { calculateOtherFactors } from './scoringHelpers';
 
 /**
  * Get all games for today with real schedule + mock scores blended
@@ -73,7 +74,10 @@ export async function getTodayGames(): Promise<Game[]> {
       const awayTeamPitchingQuality = fullGame.awayTeamStats?.oversRate || 50;
       
       const bullpenScore = calculateBullpenQuality(homeTeamPitchingQuality, awayTeamPitchingQuality);
-      
+
+      // Calculate Other Factors from the ballpark run environment (park/environment proxy)
+      const otherFactorsScore = calculateOtherFactors(fullGame);
+
       // Log bullpen calculation for verification
       console.log(
         `[bullpen] ${fullGame.homeTeam} vs ${fullGame.awayTeam}: ` +
@@ -91,6 +95,7 @@ export async function getTodayGames(): Promise<Game[]> {
           last30GamesTrend: last30GamesScore,
           opposingPitcherQuality: pitcherScore,
           opposingBullpenQuality: bullpenScore,
+          otherFactors: otherFactorsScore,
         },
       };
     });
