@@ -35,29 +35,70 @@ function formatGameTime(isoDateTime: string): string {
 }
 
 /**
+ * Extract pitcher data from hydrated schedule response
+ * The MLB schedule endpoint with hydrate=probablePitcher includes pitcher names
+ * but not ERA data (ERA requires separate complex API calls)
+ */
+interface ExtractedPitcher {
+  name: string;
+  era: number | null;
+}
+
+function extractPitcherData(
+  probablePitcherObj: any,
+  team: 'home' | 'away'
+): ExtractedPitcher {
+  try {
+    // Get pitcher name from schedule response
+    const pitcherName = probablePitcherObj?.fullName || 'TBD';
+    // ERA is not available in the hydrated schedule response
+    // Return null to display N/A in UI
+    return {
+      name: pitcherName,
+      era: null,
+    };
+  } catch (error) {
+    console.log(`[mlbTransform] Error extracting pitcher data for ${team} team:`, error);
+    return { name: 'TBD', era: null };
+  }
+}
+
+/**
  * Transform a single MLB game to Game interface format
  * Includes only schedule data (team names, time, ID)
  * Other fields should be provided separately (scores, stats, etc.)
  */
 export function transformScheduleGame(
   mlbGame: MLBGame,
-  mockGameData?: Partial<Game>
+  mockGameData?: Partial<Game>,
+  realPitchers?: { home: ExtractedPitcher; away: ExtractedPitcher }
 ): Partial<Game> {
   return {
     id: String(mlbGame.gamePk),
     homeTeam: mlbGame.teams.home.team.name,
     awayTeam: mlbGame.teams.away.team.name,
     time: formatGameTime(mlbGame.gameDate),
-    // Spread mock data to preserve scores, stats, pitchers for now
+    // Spread mock data to preserve scores, stats
     ...mockGameData,
+    // Override with real pitcher data if available
+    ...(realPitchers && {
+      homePitcher: {
+        name: realPitchers.home.name,
+        era: realPitchers.home.era || 0,
+      },
+      awayPitcher: {
+        name: realPitchers.away.name,
+        era: realPitchers.away.era || 0,
+      },
+    }),
   };
 }
 
 /**
  * Transform an array of MLB games to Game interface format with real team stats
- * @param mlbGames Array of games from MLB API
+ * @param mlbGames Array of games from MLB API (with probable pitchers hydrated)
  * @param mockGames Mock games for fallback/blending
- * @returns Transformed games with real schedule + real team stats + mock scoring data
+ * @returns Transformed games with real schedule + real team stats + real pitcher names
  */
 export async function transformScheduleGames(
   mlbGames: MLBGame[],
@@ -92,15 +133,31 @@ export async function transformScheduleGames(
       const homeTeamStats = await getTeamStatsById(homeTeamId, homeTeamName);
       const awayTeamStats = await getTeamStatsById(awayTeamId, awayTeamName);
 
-      return transformScheduleGame(mlbGame, {
-        runScore: mockGame?.runScore,
-        thresholds: mockGame?.thresholds,
-        homeTeamStats: homeTeamStats || mockGame?.homeTeamStats,
-        awayTeamStats: awayTeamStats || mockGame?.awayTeamStats,
-        homePitcher: mockGame?.homePitcher,
-        awayPitcher: mockGame?.awayPitcher,
-        scoringBreakdown: mockGame?.scoringBreakdown,
-      });
+      // Extract real pitcher data from hydrated schedule response
+      const homePitcher = extractPitcherData(mlbGame.teams.home.probablePitcher, 'home');
+      const awayPitcher = extractPitcherData(mlbGame.teams.away.probablePitcher, 'away');
+
+      // Log extracted pitcher data for verification
+      console.log(
+        `[pitchers] ${awayTeamName} @ ${homeTeamName}: ` +
+        `awayPitcher=${awayPitcher.name}, ` +
+        `homePitcher=${homePitcher.name}`
+      );
+
+      return transformScheduleGame(
+        mlbGame,
+        {
+          runScore: mockGame?.runScore,
+          thresholds: mockGame?.thresholds,
+          homeTeamStats: homeTeamStats || mockGame?.homeTeamStats,
+          awayTeamStats: awayTeamStats || mockGame?.awayTeamStats,
+          scoringBreakdown: mockGame?.scoringBreakdown,
+        },
+        {
+          home: homePitcher,
+          away: awayPitcher,
+        }
+      );
     })
   );
 }

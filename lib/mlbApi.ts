@@ -12,11 +12,19 @@ export interface MLBGame {
         id?: number;
         name: string;
       };
+      probablePitcher?: {
+        id?: number;
+        fullName?: string;
+      };
     };
     home: {
       team: {
         id?: number;
         name: string;
+      };
+      probablePitcher?: {
+        id?: number;
+        fullName?: string;
       };
     };
   };
@@ -58,7 +66,7 @@ export interface MLBGameResult {
 }
 
 /**
- * Fetch today's MLB schedule
+ * Fetch today's MLB schedule with probable pitchers
  * @param dateStr Optional date in YYYY-MM-DD format, defaults to today
  * @returns Array of games for the specified date
  */
@@ -68,7 +76,7 @@ export async function getSchedule(dateStr?: string): Promise<MLBGame[]> {
     const date = dateStr || new Date().toISOString().split('T')[0];
     
     const response = await fetch(
-      `${MLB_API_BASE}/schedule?sportId=1&date=${date}`,
+      `${MLB_API_BASE}/schedule?sportId=1&date=${date}&hydrate=probablePitcher`,
       { next: { revalidate: 3600 } } // Cache for 1 hour
     );
 
@@ -197,6 +205,7 @@ export async function getAllTeams(): Promise<Map<string, number>> {
     return new Map();
   }
 }
+
 
 /**
  * Get team ID by team name

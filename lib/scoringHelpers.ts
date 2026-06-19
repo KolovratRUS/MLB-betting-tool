@@ -140,3 +140,58 @@ export function calculateThresholds(game: Game): {
 
   return { over55, over65, over75, over85 };
 }
+
+/**
+ * Calculate pitcher performance score from ERA values
+ * 
+ * Low ERA (good pitchers) → lower scoring expectation → lower score
+ * High ERA (poor pitchers) → higher scoring expectation → higher score
+ * 
+ * Uses interpolation between mapped values:
+ * ERA <= 2.50 → 20
+ * ERA = 3.00 → 35
+ * ERA = 3.50 → 50
+ * ERA = 4.00 → 65
+ * ERA = 4.50 → 80
+ * ERA >= 5.00 → 100
+ * 
+ * @param homeEra Home pitcher ERA (or null)
+ * @param awayEra Away pitcher ERA (or null)
+ * @returns Pitcher performance score (0-100)
+ */
+export function calculatePitcherPerformance(homeEra: number | null, awayEra: number | null): number {
+  // Default ERA if unavailable
+  const defaultEra = 4.0;
+  const homeValue = homeEra ?? defaultEra;
+  const awayValue = awayEra ?? defaultEra;
+
+  // Calculate combined ERA (average)
+  const combinedEra = (homeValue + awayValue) / 2;
+
+  // Map ERA to score using interpolation
+  let score: number;
+
+  if (combinedEra <= 2.5) {
+    score = 20;
+  } else if (combinedEra <= 3.0) {
+    // Interpolate between 2.5 (20) and 3.0 (35)
+    score = 20 + ((combinedEra - 2.5) / 0.5) * (35 - 20);
+  } else if (combinedEra <= 3.5) {
+    // Interpolate between 3.0 (35) and 3.5 (50)
+    score = 35 + ((combinedEra - 3.0) / 0.5) * (50 - 35);
+  } else if (combinedEra <= 4.0) {
+    // Interpolate between 3.5 (50) and 4.0 (65)
+    score = 50 + ((combinedEra - 3.5) / 0.5) * (65 - 50);
+  } else if (combinedEra <= 4.5) {
+    // Interpolate between 4.0 (65) and 4.5 (80)
+    score = 65 + ((combinedEra - 4.0) / 0.5) * (80 - 65);
+  } else if (combinedEra <= 5.0) {
+    // Interpolate between 4.5 (80) and 5.0 (100)
+    score = 80 + ((combinedEra - 4.5) / 0.5) * (100 - 80);
+  } else {
+    // ERA >= 5.0 = 100
+    score = 100;
+  }
+
+  return Math.round(score);
+}

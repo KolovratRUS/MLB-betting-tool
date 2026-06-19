@@ -9,6 +9,7 @@ import { mockGames, Game } from './mockData';
 import { calculateSeasonOversPerformance } from './scoringHelpers';
 import { calculateLast30GamesTrend } from './scoringHelpers';
 import { calculateThresholds } from './scoringHelpers';
+import { calculatePitcherPerformance } from './scoringHelpers';
 
 /**
  * Get all games for today with real schedule + mock scores blended
@@ -25,7 +26,7 @@ export async function getTodayGames(): Promise<Game[]> {
     }
 
     // Transform MLB games to our Game interface
-    // Blend real schedule with real team stats + mock scoring data
+    // Blend real schedule with real team stats + real pitcher data
     const transformedGames = await transformScheduleGames(mlbGames, mockGames);
 
     // Ensure all games have required fields (fill missing with mock if needed)
@@ -61,6 +62,9 @@ export async function getTodayGames(): Promise<Game[]> {
       // Calculate Last 30 Games trend from real team stats (always, even with fallback)
       const last30GamesScore = calculateLast30GamesTrend(fullGame);
       
+      // Calculate pitcher performance from real starting pitcher ERA values
+      const pitcherScore = calculatePitcherPerformance(fullGame.homePitcher?.era || null, fullGame.awayPitcher?.era || null);
+      
       return {
         ...fullGame,
         thresholds: realThresholds,
@@ -68,6 +72,7 @@ export async function getTodayGames(): Promise<Game[]> {
           ...fullGame.scoringBreakdown,
           seasonOversPerformance: seasonOversScore,
           last30GamesTrend: last30GamesScore,
+          opposingPitcherQuality: pitcherScore,
         },
       };
     });
