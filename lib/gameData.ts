@@ -6,6 +6,7 @@
 import { getSchedule } from './mlbApi';
 import { transformScheduleGames } from './mlbTransform';
 import { mockGames, Game } from './mockData';
+import { calculateSeasonOversPerformance } from './scoringHelpers';
 
 /**
  * Get all games for today with real schedule + mock scores blended
@@ -30,7 +31,7 @@ export async function getTodayGames(): Promise<Game[]> {
       // If a game has missing required fields, fall back to mock
       if (!game.runScore || !game.thresholds) {
         const fallbackMock = mockGames[index % mockGames.length];
-        return {
+        game = {
           ...game,
           id: game.id || fallbackMock.id,
           homeTeam: game.homeTeam || fallbackMock.homeTeam,
@@ -45,7 +46,27 @@ export async function getTodayGames(): Promise<Game[]> {
           scoringBreakdown: game.scoringBreakdown || fallbackMock.scoringBreakdown,
         };
       }
-      return game as Game;
+      
+      // Cast to Game type with all required fields for calculation
+      const fullGame = game as Game;
+      
+      // Calculate Season Overs performance from real team stats (always, even with fallback)
+      const seasonOversScore = calculateSeasonOversPerformance(fullGame);
+      
+      // Log for verification
+      console.log(
+        `[gameData] ${fullGame.homeTeam} @ ${fullGame.awayTeam}: ` +
+        `calculated seasonOversPerformance=${seasonOversScore}, ` +
+        `final scoringBreakdown.seasonOversPerformance=${seasonOversScore}`
+      );
+      
+      return {
+        ...fullGame,
+        scoringBreakdown: {
+          ...fullGame.scoringBreakdown,
+          seasonOversPerformance: seasonOversScore,
+        },
+      };
     });
 
     return enrichedGames;
