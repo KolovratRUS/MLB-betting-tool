@@ -30,11 +30,11 @@ export interface Game {
   };
   homePitcher: {
     name: string;
-    era: number;
+    era: number | null; // null = ERA unavailable (display "N/A")
   };
   awayPitcher: {
     name: string;
-    era: number;
+    era: number | null; // null = ERA unavailable (display "N/A")
   };
   scoringBreakdown: {
     seasonOversPerformance: number;

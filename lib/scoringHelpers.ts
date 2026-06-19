@@ -29,17 +29,42 @@ export function calculateSeasonOversPerformance(game: Game): number {
 
   // Combine both team rates to get matchup expectation
   // Weighted average: slightly favor home team (55% home, 45% away)
-  const combinedRate = Math.round((homeAvgRate * 0.55) + (awayAvgRate * 0.45));
+  const combinedRate = (homeAvgRate * 0.55) + (awayAvgRate * 0.45);
+
+  // Rescale the combined over-rate percentage into a 0-100 score using linear
+  // interpolation between calibration points, so real over-rates (which cluster
+  // in a narrow band) spread more meaningfully across games:
+  //   <=30% -> 25, 35% -> 45, 40% -> 65, 45% -> 82, >=50% -> 95
+  let score: number;
+  if (combinedRate <= 30) {
+    score = 25;
+  } else if (combinedRate <= 35) {
+    // Interpolate between 30% (25) and 35% (45)
+    score = 25 + ((combinedRate - 30) / 5) * (45 - 25);
+  } else if (combinedRate <= 40) {
+    // Interpolate between 35% (45) and 40% (65)
+    score = 45 + ((combinedRate - 35) / 5) * (65 - 45);
+  } else if (combinedRate <= 45) {
+    // Interpolate between 40% (65) and 45% (82)
+    score = 65 + ((combinedRate - 40) / 5) * (82 - 65);
+  } else if (combinedRate <= 50) {
+    // Interpolate between 45% (82) and 50% (95)
+    score = 82 + ((combinedRate - 45) / 5) * (95 - 82);
+  } else {
+    // 50%+ over-rate caps at 95
+    score = 95;
+  }
+
+  const roundedScore = Math.round(score);
 
   // Log for verification
   console.log(
     `[seasonOvers] ${game.homeTeam} vs ${game.awayTeam}: ` +
-    `Home=${homeAvgRate}% (O5.5=${homeStats.over55Rate}% O6.5=${homeStats.over65Rate}% O7.5=${homeStats.over75Rate}% O8.5=${homeStats.over85Rate}%) ` +
-    `Away=${awayAvgRate}% (O5.5=${awayStats.over55Rate}% O6.5=${awayStats.over65Rate}% O7.5=${awayStats.over75Rate}% O8.5=${awayStats.over85Rate}%) ` +
-    `Combined=${combinedRate}%`
+    `Home=${homeAvgRate}%, Away=${awayAvgRate}%, ` +
+    `Combined=${combinedRate.toFixed(1)}%, seasonOversScore=${roundedScore}`
   );
 
-  return combinedRate;
+  return roundedScore;
 }
 
 /**

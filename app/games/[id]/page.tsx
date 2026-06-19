@@ -105,8 +105,8 @@ export default async function MatchupAnalysis({ params }: MatchupPageProps) {
             <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
               <h3 className="text-sm font-bold text-white mb-3">Pitchers (15%)</h3>
               <div className="text-xs text-gray-400 mb-3 space-y-1">
-                <p><span className="text-white">{game.homeTeam}</span>: {game.homePitcher.name} ({game.homePitcher.era} ERA)</p>
-                <p><span className="text-white">{game.awayTeam}</span>: {game.awayPitcher.name} ({game.awayPitcher.era} ERA)</p>
+                <p><span className="text-white">{game.homeTeam}</span>: {game.homePitcher.name} ({game.homePitcher.era ?? 'N/A'} ERA)</p>
+                <p><span className="text-white">{game.awayTeam}</span>: {game.awayPitcher.name} ({game.awayPitcher.era ?? 'N/A'} ERA)</p>
               </div>
               <div className="flex items-center gap-2">
                 <div className="flex-1 bg-gray-700 rounded-full h-2 overflow-hidden">

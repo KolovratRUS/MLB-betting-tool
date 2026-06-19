@@ -66,7 +66,8 @@ export async function getTodayGames(): Promise<Game[]> {
       const last30GamesScore = calculateLast30GamesTrend(fullGame);
       
       // Calculate pitcher performance from real starting pitcher ERA values
-      const pitcherScore = calculatePitcherPerformance(fullGame.homePitcher?.era || null, fullGame.awayPitcher?.era || null);
+      // Use ?? so a genuine 0.00 ERA is preserved; null (unavailable) yields the neutral default inside the helper
+      const pitcherScore = calculatePitcherPerformance(fullGame.homePitcher?.era ?? null, fullGame.awayPitcher?.era ?? null);
       
       // Calculate bullpen quality from team pitching stats
       // Using oversRate as a proxy for team pitching quality

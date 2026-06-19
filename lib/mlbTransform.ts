@@ -3,7 +3,7 @@
  */
 
 import { Game } from './mockData';
-import { MLBGame, getTeamIdByName } from './mlbApi';
+import { MLBGame, getTeamIdByName, getPitcherSeasonEra } from './mlbApi';
 import { getTeamStatsById } from './teamStats';
 
 /**
@@ -35,28 +35,39 @@ function formatGameTime(isoDateTime: string): string {
 }
 
 /**
- * Extract pitcher data from hydrated schedule response
- * The MLB schedule endpoint with hydrate=probablePitcher includes pitcher names
- * but not ERA data (ERA requires separate complex API calls)
+ * Extract pitcher data from hydrated schedule response.
+ * The MLB schedule endpoint with hydrate=probablePitcher includes the pitcher
+ * name and ID, but not ERA. We use the ID to fetch the real current-season ERA
+ * from /people/{id}/stats?stats=season&group=pitching. If the ID is missing or
+ * the lookup fails, era is left null so the UI shows "N/A".
  */
 interface ExtractedPitcher {
   name: string;
   era: number | null;
 }
 
-function extractPitcherData(
+async function extractPitcherData(
   probablePitcherObj: any,
   team: 'home' | 'away'
-): ExtractedPitcher {
+): Promise<ExtractedPitcher> {
   try {
-    // Get pitcher name from schedule response
+    // Get pitcher name and ID from schedule response
     const pitcherName = probablePitcherObj?.fullName || 'TBD';
-    // ERA is not available in the hydrated schedule response
-    // Return null to display N/A in UI
-    return {
-      name: pitcherName,
-      era: null,
-    };
+    const pitcherId: number | null = probablePitcherObj?.id ?? null;
+
+    // Fetch real season ERA by pitcher ID (null if unavailable)
+    let era: number | null = null;
+    if (pitcherId) {
+      era = await getPitcherSeasonEra(pitcherId);
+    }
+
+    // Log pitcher name, ID, and whether ERA was found
+    console.log(
+      `[pitcherEra] ${team}: name=${pitcherName}, id=${pitcherId ?? 'N/A'}, ` +
+      `era=${era !== null ? era : 'unavailable'}`
+    );
+
+    return { name: pitcherName, era };
   } catch (error) {
     console.log(`[mlbTransform] Error extracting pitcher data for ${team} team:`, error);
     return { name: 'TBD', era: null };
@@ -84,11 +95,11 @@ export function transformScheduleGame(
     ...(realPitchers && {
       homePitcher: {
         name: realPitchers.home.name,
-        era: realPitchers.home.era || 0,
+        era: realPitchers.home.era, // number, or null when ERA is unavailable
       },
       awayPitcher: {
         name: realPitchers.away.name,
-        era: realPitchers.away.era || 0,
+        era: realPitchers.away.era, // number, or null when ERA is unavailable
       },
     }),
   };
@@ -134,8 +145,10 @@ export async function transformScheduleGames(
       const awayTeamStats = await getTeamStatsById(awayTeamId, awayTeamName);
 
       // Extract real pitcher data from hydrated schedule response
-      const homePitcher = extractPitcherData(mlbGame.teams.home.probablePitcher, 'home');
-      const awayPitcher = extractPitcherData(mlbGame.teams.away.probablePitcher, 'away');
+      const [homePitcher, awayPitcher] = await Promise.all([
+        extractPitcherData(mlbGame.teams.home.probablePitcher, 'home'),
+        extractPitcherData(mlbGame.teams.away.probablePitcher, 'away'),
+      ]);
 
       // Log extracted pitcher data for verification
       console.log(

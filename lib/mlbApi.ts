@@ -176,6 +176,47 @@ export async function getTeamGameResults(teamId: number, season?: number): Promi
 }
 
 /**
+ * Fetch a pitcher's current-season ERA by player ID.
+ *
+ * Endpoint: /people/{id}/stats?stats=season&group=pitching
+ * (Verified to return current-season ERA; the API returns ERA as a string.)
+ *
+ * @param pitcherId MLB person/player ID (from probablePitcher.id)
+ * @returns Season ERA as a number, or null if unavailable
+ */
+export async function getPitcherSeasonEra(pitcherId: number): Promise<number | null> {
+  try {
+    const response = await fetch(
+      `${MLB_API_BASE}/people/${pitcherId}/stats?stats=season&group=pitching`,
+      { next: { revalidate: 3600 } } // Cache for 1 hour
+    );
+
+    if (!response.ok) {
+      console.error(`[MLB API] Error fetching pitcher ERA for ${pitcherId}: ${response.status}`);
+      return null;
+    }
+
+    const data: any = await response.json();
+
+    // Season pitching stats live at stats[0].splits[0].stat.era (string form)
+    const split = data?.stats?.[0]?.splits?.[0];
+    const rawEra = split?.stat?.era;
+
+    if (rawEra === undefined || rawEra === null || rawEra === '') {
+      return null;
+    }
+
+    // ERA arrives as a string like "1.74"; non-numeric placeholders ("-.--",
+    // "INF", "*.**") parse to NaN and are treated as unavailable.
+    const era = parseFloat(rawEra);
+    return Number.isFinite(era) ? era : null;
+  } catch (error) {
+    console.error(`[MLB API] Error fetching pitcher ERA for ${pitcherId}:`, error);
+    return null;
+  }
+}
+
+/**
  * Get all MLB teams with their IDs
  * @returns Map of team names to team IDs
  */
