@@ -195,3 +195,58 @@ export function calculatePitcherPerformance(homeEra: number | null, awayEra: num
 
   return Math.round(score);
 }
+
+/**
+ * Calculate bullpen quality score from team pitching ERA
+ * 
+ * Note: This uses team overall pitching ERA as a proxy for bullpen quality.
+ * True bullpen-only stats would require additional complex API queries.
+ * 
+ * Higher team ERA (worse pitching) → higher score (more over-friendly)
+ * Lower team ERA (better pitching) → lower score (less over-friendly)
+ * 
+ * Uses the same mapping as pitcher performance but inverted:
+ * ERA <= 2.50 → 20 (excellent pitching, low overs expectation)
+ * ERA = 3.00 → 35
+ * ERA = 3.50 → 50
+ * ERA = 4.00 → 65
+ * ERA = 4.50 → 80
+ * ERA >= 5.00 → 100 (poor pitching, high overs expectation)
+ * 
+ * @param homeTeamPitchingEra Home team pitching ERA
+ * @param awayTeamPitchingEra Away team pitching ERA
+ * @returns Bullpen quality score (0-100)
+ */
+export function calculateBullpenQuality(
+  homeTeamPitchingEra: number | null,
+  awayTeamPitchingEra: number | null
+): number {
+  // Use team ERA as proxy for bullpen quality
+  // Default to 4.0 if unavailable
+  const homeEra = homeTeamPitchingEra ?? 4.0;
+  const awayEra = awayTeamPitchingEra ?? 4.0;
+
+  // Calculate combined ERA (average)
+  const combinedEra = (homeEra + awayEra) / 2;
+
+  // Map ERA to score using interpolation (same as pitcher performance)
+  let score: number;
+
+  if (combinedEra <= 2.5) {
+    score = 20;
+  } else if (combinedEra <= 3.0) {
+    score = 20 + ((combinedEra - 2.5) / 0.5) * (35 - 20);
+  } else if (combinedEra <= 3.5) {
+    score = 35 + ((combinedEra - 3.0) / 0.5) * (50 - 35);
+  } else if (combinedEra <= 4.0) {
+    score = 50 + ((combinedEra - 3.5) / 0.5) * (65 - 50);
+  } else if (combinedEra <= 4.5) {
+    score = 65 + ((combinedEra - 4.0) / 0.5) * (80 - 65);
+  } else if (combinedEra <= 5.0) {
+    score = 80 + ((combinedEra - 4.5) / 0.5) * (100 - 80);
+  } else {
+    score = 100;
+  }
+
+  return Math.round(score);
+}

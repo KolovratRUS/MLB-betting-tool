@@ -10,6 +10,7 @@ import { calculateSeasonOversPerformance } from './scoringHelpers';
 import { calculateLast30GamesTrend } from './scoringHelpers';
 import { calculateThresholds } from './scoringHelpers';
 import { calculatePitcherPerformance } from './scoringHelpers';
+import { calculateBullpenQuality } from './scoringHelpers';
 
 /**
  * Get all games for today with real schedule + mock scores blended
@@ -65,6 +66,22 @@ export async function getTodayGames(): Promise<Game[]> {
       // Calculate pitcher performance from real starting pitcher ERA values
       const pitcherScore = calculatePitcherPerformance(fullGame.homePitcher?.era || null, fullGame.awayPitcher?.era || null);
       
+      // Calculate bullpen quality from team pitching stats
+      // Using oversRate as a proxy for team pitching quality
+      // oversRate is calculated from over55/over65/over75/over85 rates which reflect pitching performance
+      const homeTeamPitchingQuality = fullGame.homeTeamStats?.oversRate || 50;
+      const awayTeamPitchingQuality = fullGame.awayTeamStats?.oversRate || 50;
+      
+      const bullpenScore = calculateBullpenQuality(homeTeamPitchingQuality, awayTeamPitchingQuality);
+      
+      // Log bullpen calculation for verification
+      console.log(
+        `[bullpen] ${fullGame.homeTeam} vs ${fullGame.awayTeam}: ` +
+        `Home pitching quality=${homeTeamPitchingQuality}, ` +
+        `Away pitching quality=${awayTeamPitchingQuality}, ` +
+        `Combined score=${bullpenScore}`
+      );
+      
       return {
         ...fullGame,
         thresholds: realThresholds,
@@ -73,6 +90,7 @@ export async function getTodayGames(): Promise<Game[]> {
           seasonOversPerformance: seasonOversScore,
           last30GamesTrend: last30GamesScore,
           opposingPitcherQuality: pitcherScore,
+          opposingBullpenQuality: bullpenScore,
         },
       };
     });
