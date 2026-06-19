@@ -314,56 +314,67 @@ export function calculateOtherFactors(game: Game): number {
 }
 
 /**
- * Calculate bullpen quality score from team pitching ERA
- * 
- * Note: This uses team overall pitching ERA as a proxy for bullpen quality.
- * True bullpen-only stats would require additional complex API queries.
- * 
- * Higher team ERA (worse pitching) → higher score (more over-friendly)
- * Lower team ERA (better pitching) → lower score (less over-friendly)
- * 
- * Uses the same mapping as pitcher performance but inverted:
- * ERA <= 2.50 → 20 (excellent pitching, low overs expectation)
- * ERA = 3.00 → 35
- * ERA = 3.50 → 50
- * ERA = 4.00 → 65
- * ERA = 4.50 → 80
- * ERA >= 5.00 → 100 (poor pitching, high overs expectation)
- * 
- * @param homeTeamPitchingEra Home team pitching ERA
- * @param awayTeamPitchingEra Away team pitching ERA
+ * Calculate bullpen quality score from team OVER-RATE percentages.
+ *
+ * TEMPORARY PROXY: until true bullpen-only stats are wired in, the team
+ * `oversRate` percentage is used as a stand-in for bullpen/pitching quality.
+ * Inputs are therefore PERCENTAGES (0-100), NOT ERA values.
+ *
+ * Higher over-rate (more games go over) → higher score (more over-friendly).
+ * Lower over-rate → lower score (less over-friendly).
+ *
+ * Linear interpolation between these calibration points:
+ *   <= 30% → 35
+ *      35% → 50
+ *      40% → 65
+ *      45% → 80
+ *   >= 50% → 95
+ *
+ * @param homeTeamOverRate Home team over-rate percentage (0-100), or null
+ * @param awayTeamOverRate Away team over-rate percentage (0-100), or null
  * @returns Bullpen quality score (0-100)
  */
 export function calculateBullpenQuality(
-  homeTeamPitchingEra: number | null,
-  awayTeamPitchingEra: number | null
+  homeTeamOverRate: number | null,
+  awayTeamOverRate: number | null
 ): number {
-  // Use team ERA as proxy for bullpen quality
-  // Default to 4.0 if unavailable
-  const homeEra = homeTeamPitchingEra ?? 4.0;
-  const awayEra = awayTeamPitchingEra ?? 4.0;
+  // Neutral default (~38% over-rate maps to a mid-range score) when data missing.
+  const defaultOverRate = 38;
+  const homeRate = homeTeamOverRate ?? defaultOverRate;
+  const awayRate = awayTeamOverRate ?? defaultOverRate;
 
-  // Calculate combined ERA (average)
-  const combinedEra = (homeEra + awayEra) / 2;
+  // Combined over-rate (average of both teams)
+  const combinedOverRate = (homeRate + awayRate) / 2;
 
-  // Map ERA to score using interpolation (same as pitcher performance)
+  // Map combined over-rate percentage to score using linear interpolation
   let score: number;
 
-  if (combinedEra <= 2.5) {
-    score = 20;
-  } else if (combinedEra <= 3.0) {
-    score = 20 + ((combinedEra - 2.5) / 0.5) * (35 - 20);
-  } else if (combinedEra <= 3.5) {
-    score = 35 + ((combinedEra - 3.0) / 0.5) * (50 - 35);
-  } else if (combinedEra <= 4.0) {
-    score = 50 + ((combinedEra - 3.5) / 0.5) * (65 - 50);
-  } else if (combinedEra <= 4.5) {
-    score = 65 + ((combinedEra - 4.0) / 0.5) * (80 - 65);
-  } else if (combinedEra <= 5.0) {
-    score = 80 + ((combinedEra - 4.5) / 0.5) * (100 - 80);
+  if (combinedOverRate <= 30) {
+    score = 35;
+  } else if (combinedOverRate <= 35) {
+    // Interpolate between 30% (35) and 35% (50)
+    score = 35 + ((combinedOverRate - 30) / 5) * (50 - 35);
+  } else if (combinedOverRate <= 40) {
+    // Interpolate between 35% (50) and 40% (65)
+    score = 50 + ((combinedOverRate - 35) / 5) * (65 - 50);
+  } else if (combinedOverRate <= 45) {
+    // Interpolate between 40% (65) and 45% (80)
+    score = 65 + ((combinedOverRate - 40) / 5) * (80 - 65);
+  } else if (combinedOverRate <= 50) {
+    // Interpolate between 45% (80) and 50% (95)
+    score = 80 + ((combinedOverRate - 45) / 5) * (95 - 80);
   } else {
-    score = 100;
+    // 50%+ over-rate caps at 95
+    score = 95;
   }
 
-  return Math.round(score);
+  const roundedScore = Math.round(score);
+
+  // Log for verification
+  console.log(
+    `[bullpen] homeRate=${homeRate}%, awayRate=${awayRate}%, ` +
+    `combinedRate=${combinedOverRate.toFixed(1)}%, bullpenScore=${roundedScore} (over-rate proxy)`
+  );
+
+  return roundedScore;
 }
