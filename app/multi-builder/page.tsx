@@ -188,7 +188,7 @@ export default function MultiBuilder() {
                       {game.awayTeam} @ {game.homeTeam}
                     </p>
                     <p className="text-xs text-gray-400">
-                      {game.thresholds[key]}% {selectedThreshold.replace('over', 'O')}
+                      {game.thresholds[key]}% {selectedThreshold === 'over55' ? 'O5.5' : selectedThreshold === 'over65' ? 'O6.5' : selectedThreshold === 'over75' ? 'O7.5' : 'O8.5'}
                     </p>
                   </div>
                 </label>
@@ -217,7 +217,7 @@ export default function MultiBuilder() {
 
               <div className="border-t border-gray-600 pt-3 mb-4">
                 <p className="text-xs text-gray-400 mb-1">Combined Hit Rate</p>
-                <p className="text-2xl font-black text-green-400">{Math.round(customHitRate * 100) / 100}%</p>
+                <p className="text-2xl font-black text-green-400">{Math.round(customHitRate * 10000) / 100}%</p>
               </div>
 
               <button
