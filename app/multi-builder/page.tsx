@@ -1,25 +1,47 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
-import { mockGames } from '@/lib/mockData';
+import { Game } from '@/lib/mockData';
 
 export default function MultiBuilder() {
   const [selectedThreshold, setSelectedThreshold] = useState<'over55' | 'over65' | 'over75' | 'over85'>('over55');
   const [selectedGameIds, setSelectedGameIds] = useState<string[]>([]);
+  const [games, setGames] = useState<Game[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  // Fetch today's real games from the API on mount
+  useEffect(() => {
+    async function fetchGames() {
+      try {
+        const response = await fetch('/api/games/today');
+        if (!response.ok) throw new Error(`Request failed: ${response.status}`);
+        const data = await response.json();
+        setGames(Array.isArray(data) ? data : []);
+      } catch (err) {
+        console.error('Failed to fetch games:', err);
+        setError(true);
+        setGames([]);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchGames();
+  }, []);
 
   // Sort games by selected threshold
   const sortedGames = useMemo(() => {
-    return [...mockGames]
+    return [...games]
       .sort((a, b) => {
         const thresholdKey = selectedThreshold as keyof typeof a.thresholds;
         return b.thresholds[thresholdKey] - a.thresholds[thresholdKey];
       });
-  }, [selectedThreshold]);
+  }, [selectedThreshold, games]);
 
   // Generate top 3 combinations
   const get2LegCombos = () => {
-    const combos: Array<{ games: typeof mockGames; hitRate: number }> = [];
+    const combos: Array<{ games: Game[]; hitRate: number }> = [];
     const thresholdKey = selectedThreshold as 'over55' | 'over65' | 'over75' | 'over85';
     for (let i = 0; i < sortedGames.length; i++) {
       for (let j = i + 1; j < sortedGames.length; j++) {
@@ -36,7 +58,7 @@ export default function MultiBuilder() {
   };
 
   const get3LegCombos = () => {
-    const combos: Array<{ games: typeof mockGames; hitRate: number }> = [];
+    const combos: Array<{ games: Game[]; hitRate: number }> = [];
     const thresholdKey = selectedThreshold as 'over55' | 'over65' | 'over75' | 'over85';
     for (let i = 0; i < sortedGames.length - 2; i++) {
       for (let j = i + 1; j < sortedGames.length - 1; j++) {
@@ -60,7 +82,7 @@ export default function MultiBuilder() {
   const twoLegCombos = get2LegCombos();
   const threeLegCombos = get3LegCombos();
 
-  const selectedGames = mockGames.filter((g) => selectedGameIds.includes(g.id));
+  const selectedGames = games.filter((g) => selectedGameIds.includes(g.id));
   const thresholdKey = selectedThreshold as 'over55' | 'over65' | 'over75' | 'over85';
   const customHitRate =
     selectedGames.length > 0
@@ -88,6 +110,20 @@ export default function MultiBuilder() {
           <h1 className="text-3xl font-black text-white">Parlay Builder</h1>
         </div>
 
+        {loading && (
+          <div className="text-center text-gray-400 py-12 text-sm">Loading today&apos;s games…</div>
+        )}
+
+        {!loading && error && (
+          <div className="text-center text-red-400 py-12 text-sm">Failed to load games. Please try again later.</div>
+        )}
+
+        {!loading && !error && games.length === 0 && (
+          <div className="text-center text-gray-400 py-12 text-sm">No games available today.</div>
+        )}
+
+        {!loading && !error && games.length > 0 && (
+        <>
         {/* Threshold Selector */}
         <div className="mb-6 flex flex-wrap gap-2">
           {['over55', 'over65', 'over75', 'over85'].map((threshold) => {
@@ -236,6 +272,8 @@ export default function MultiBuilder() {
             </div>
           )}
         </div>
+        </>
+        )}
       </div>
     </div>
   );
