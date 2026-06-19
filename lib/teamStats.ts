@@ -5,7 +5,11 @@
 import { getTeamGameResults, getTeamIdByName } from './mlbApi';
 
 export interface TeamStats {
-  oversRate: number;
+  over55Rate: number;
+  over65Rate: number;
+  over75Rate: number;
+  over85Rate: number;
+  oversRate: number; // Backward compatibility: average of the four rates
   last30AvgRuns: number;
   season: string;
 }
@@ -113,10 +117,14 @@ export async function getTeamStatsById(teamId: number | null, teamName: string):
       `[teamStats] ${teamName} (ID: ${teamId}): Over 5.5=${over55}%, Over 6.5=${over65}%, Over 7.5=${over75}%, Over 8.5=${over85}%, Last 30 avg=${last30Avg} runs, Games=${gamesPlayed}`
     );
 
-    // Return the average over rate across thresholds as oversRate
+    // Calculate average over rate for backward compatibility
     const avgOverRate = Math.round((over55 + over65 + over75 + over85) / 4);
 
     return {
+      over55Rate: over55,
+      over65Rate: over65,
+      over75Rate: over75,
+      over85Rate: over85,
       oversRate: avgOverRate,
       last30AvgRuns: last30Avg,
       season: `${gamesPlayed} games played`,

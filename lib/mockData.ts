@@ -11,12 +11,20 @@ export interface Game {
     over85: number;
   };
   homeTeamStats: {
-    oversRate: number;
+    over55Rate: number;
+    over65Rate: number;
+    over75Rate: number;
+    over85Rate: number;
+    oversRate: number; // Backward compatibility: set to oversRateSummary
     last30AvgRuns: number;
     season: string;
   };
   awayTeamStats: {
-    oversRate: number;
+    over55Rate: number;
+    over65Rate: number;
+    over75Rate: number;
+    over85Rate: number;
+    oversRate: number; // Backward compatibility: set to oversRateSummary
     last30AvgRuns: number;
     season: string;
   };
@@ -51,12 +59,20 @@ export const mockGames: Game[] = [
       over85: 48,
     },
     homeTeamStats: {
-      oversRate: 62,
+      over55Rate: 85,
+      over65Rate: 77,
+      over75Rate: 65,
+      over85Rate: 48,
+      oversRate: 69,
       last30AvgRuns: 5.8,
       season: '60 games played',
     },
     awayTeamStats: {
-      oversRate: 58,
+      over55Rate: 82,
+      over65Rate: 74,
+      over75Rate: 62,
+      over85Rate: 45,
+      oversRate: 66,
       last30AvgRuns: 5.9,
       season: '61 games played',
     },
@@ -89,12 +105,20 @@ export const mockGames: Game[] = [
       over85: 38,
     },
     homeTeamStats: {
-      oversRate: 65,
+      over55Rate: 78,
+      over65Rate: 68,
+      over75Rate: 55,
+      over85Rate: 38,
+      oversRate: 60,
       last30AvgRuns: 6.2,
       season: '58 games played',
     },
     awayTeamStats: {
-      oversRate: 52,
+      over55Rate: 75,
+      over65Rate: 65,
+      over75Rate: 50,
+      over85Rate: 32,
+      oversRate: 56,
       last30AvgRuns: 5.1,
       season: '59 games played',
     },
@@ -127,11 +151,19 @@ export const mockGames: Game[] = [
       over85: 32,
     },
     homeTeamStats: {
-      oversRate: 58,
+      over55Rate: 72,
+      over65Rate: 62,
+      over75Rate: 48,
+      over85Rate: 32,
+      oversRate: 54,
       last30AvgRuns: 5.5,
       season: '62 games played',
     },
     awayTeamStats: {
+      over55Rate: 70,
+      over65Rate: 60,
+      over75Rate: 45,
+      over85Rate: 28,
       oversRate: 51,
       last30AvgRuns: 4.9,
       season: '61 games played',
@@ -165,12 +197,20 @@ export const mockGames: Game[] = [
       over85: 28,
     },
     homeTeamStats: {
-      oversRate: 55,
+      over55Rate: 68,
+      over65Rate: 58,
+      over75Rate: 45,
+      over85Rate: 28,
+      oversRate: 50,
       last30AvgRuns: 5.3,
       season: '61 games played',
     },
     awayTeamStats: {
-      oversRate: 52,
+      over55Rate: 75,
+      over65Rate: 65,
+      over75Rate: 50,
+      over85Rate: 32,
+      oversRate: 56,
       last30AvgRuns: 5.1,
       season: '59 games played',
     },
@@ -203,12 +243,20 @@ export const mockGames: Game[] = [
       over85: 25,
     },
     homeTeamStats: {
-      oversRate: 48,
+      over55Rate: 62,
+      over65Rate: 52,
+      over75Rate: 40,
+      over85Rate: 25,
+      oversRate: 45,
       last30AvgRuns: 4.8,
       season: '60 games played',
     },
     awayTeamStats: {
-      oversRate: 54,
+      over55Rate: 68,
+      over65Rate: 58,
+      over75Rate: 45,
+      over85Rate: 28,
+      oversRate: 50,
       last30AvgRuns: 5.2,
       season: '61 games played',
     },
@@ -241,12 +289,20 @@ export const mockGames: Game[] = [
       over85: 18,
     },
     homeTeamStats: {
-      oversRate: 46,
+      over55Rate: 55,
+      over65Rate: 45,
+      over75Rate: 32,
+      over85Rate: 18,
+      oversRate: 38,
       last30AvgRuns: 4.5,
       season: '59 games played',
     },
     awayTeamStats: {
-      oversRate: 50,
+      over55Rate: 65,
+      over65Rate: 55,
+      over75Rate: 42,
+      over85Rate: 25,
+      oversRate: 47,
       last30AvgRuns: 4.8,
       season: '61 games played',
     },
@@ -279,12 +335,20 @@ export const mockGames: Game[] = [
       over85: 12,
     },
     homeTeamStats: {
-      oversRate: 42,
+      over55Rate: 48,
+      over65Rate: 38,
+      over75Rate: 25,
+      over85Rate: 12,
+      oversRate: 31,
       last30AvgRuns: 4.2,
       season: '60 games played',
     },
     awayTeamStats: {
-      oversRate: 48,
+      over55Rate: 55,
+      over65Rate: 45,
+      over75Rate: 32,
+      over85Rate: 18,
+      oversRate: 38,
       last30AvgRuns: 4.6,
       season: '61 games played',
     },
@@ -317,12 +381,20 @@ export const mockGames: Game[] = [
       over85: 15,
     },
     homeTeamStats: {
-      oversRate: 45,
+      over55Rate: 52,
+      over65Rate: 42,
+      over75Rate: 30,
+      over85Rate: 15,
+      oversRate: 35,
       last30AvgRuns: 4.7,
       season: '61 games played',
     },
     awayTeamStats: {
-      oversRate: 56,
+      over55Rate: 65,
+      over65Rate: 55,
+      over75Rate: 42,
+      over85Rate: 25,
+      oversRate: 47,
       last30AvgRuns: 5.3,
       season: '60 games played',
     },
