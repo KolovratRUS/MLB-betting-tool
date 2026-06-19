@@ -253,6 +253,38 @@ const PARK_ENVIRONMENT: Array<{ keyword: string; park: string; score: number }> 
 const NEUTRAL_PARK_SCORE = 55;
 
 /**
+ * Calculate the overall Run Score (Step 9) as a weighted blend of the five
+ * scoring factors. Each factor is already on a 0-100 scale, so the weighted
+ * sum is also 0-100.
+ *
+ * Weights:
+ *   - Season Overs performance .... 45%
+ *   - Last 30 games trend ......... 20%
+ *   - Opposing pitcher quality .... 15%
+ *   - Opposing bullpen quality .... 10%
+ *   - Other factors (park env.) ... 10%
+ *
+ * @param factors The five 0-100 scoring-breakdown factor values
+ * @returns Run Score (0-100), rounded to the nearest whole number
+ */
+export function calculateRunScore(factors: {
+  seasonOversPerformance: number;
+  last30GamesTrend: number;
+  opposingPitcherQuality: number;
+  opposingBullpenQuality: number;
+  otherFactors: number;
+}): number {
+  const runScore =
+    factors.seasonOversPerformance * 0.45 +
+    factors.last30GamesTrend * 0.2 +
+    factors.opposingPitcherQuality * 0.15 +
+    factors.opposingBullpenQuality * 0.1 +
+    factors.otherFactors * 0.1;
+
+  return Math.round(runScore);
+}
+
+/**
  * Calculate the "Other Factors" score (Step 8) from the ballpark run environment.
  *
  * Replaces the former mock `otherFactors` value with a real, pre-game-derived

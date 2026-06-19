@@ -12,6 +12,7 @@ import { calculateThresholds } from './scoringHelpers';
 import { calculatePitcherPerformance } from './scoringHelpers';
 import { calculateBullpenQuality } from './scoringHelpers';
 import { calculateOtherFactors } from './scoringHelpers';
+import { calculateRunScore } from './scoringHelpers';
 
 /**
  * Get all games for today with real schedule + mock scores blended
@@ -86,8 +87,29 @@ export async function getTodayGames(): Promise<Game[]> {
         `Combined score=${bullpenScore}`
       );
       
+      // Calculate the overall Run Score as a weighted blend of the five factors
+      const realRunScore = calculateRunScore({
+        seasonOversPerformance: seasonOversScore,
+        last30GamesTrend: last30GamesScore,
+        opposingPitcherQuality: pitcherScore,
+        opposingBullpenQuality: bullpenScore,
+        otherFactors: otherFactorsScore,
+      });
+
+      // Log factor values and final Run Score for verification
+      console.log(
+        `[runScore] ${fullGame.awayTeam} @ ${fullGame.homeTeam}: ` +
+        `seasonOvers=${seasonOversScore} (45%), ` +
+        `last30=${last30GamesScore} (20%), ` +
+        `pitcher=${pitcherScore} (15%), ` +
+        `bullpen=${bullpenScore} (10%), ` +
+        `other=${otherFactorsScore} (10%) ` +
+        `=> runScore=${realRunScore}`
+      );
+
       return {
         ...fullGame,
+        runScore: realRunScore,
         thresholds: realThresholds,
         scoringBreakdown: {
           ...fullGame.scoringBreakdown,
