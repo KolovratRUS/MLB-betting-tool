@@ -3,7 +3,8 @@
  */
 
 import { Game } from './mockData';
-import { MLBGame } from './mlbApi';
+import { MLBGame, getTeamIdByName } from './mlbApi';
+import { getTeamStatsById } from './teamStats';
 
 /**
  * Parse game time from ISO datetime string to readable format
@@ -53,32 +54,53 @@ export function transformScheduleGame(
 }
 
 /**
- * Transform an array of MLB games to Game interface format
+ * Transform an array of MLB games to Game interface format with real team stats
  * @param mlbGames Array of games from MLB API
  * @param mockGames Mock games for fallback/blending
- * @returns Transformed games with real schedule + mock scoring data
+ * @returns Transformed games with real schedule + real team stats + mock scoring data
  */
-export function transformScheduleGames(
+export async function transformScheduleGames(
   mlbGames: MLBGame[],
   mockGames: Game[]
-): Partial<Game>[] {
-  return mlbGames.map((mlbGame) => {
-    // Try to find matching mock game to blend mock scores
-    // Match by home/away teams (case-insensitive)
-    const mockGame = mockGames.find(
-      (mock) =>
-        mock.homeTeam.toLowerCase() === mlbGame.teams.home.team.name.toLowerCase() &&
-        mock.awayTeam.toLowerCase() === mlbGame.teams.away.team.name.toLowerCase()
-    );
+): Promise<Partial<Game>[]> {
+  return Promise.all(
+    mlbGames.map(async (mlbGame) => {
+      // Try to find matching mock game to blend mock scores
+      // Match by home/away teams (case-insensitive)
+      const mockGame = mockGames.find(
+        (mock) =>
+          mock.homeTeam.toLowerCase() === mlbGame.teams.home.team.name.toLowerCase() &&
+          mock.awayTeam.toLowerCase() === mlbGame.teams.away.team.name.toLowerCase()
+      );
 
-    return transformScheduleGame(mlbGame, {
-      runScore: mockGame?.runScore,
-      thresholds: mockGame?.thresholds,
-      homeTeamStats: mockGame?.homeTeamStats,
-      awayTeamStats: mockGame?.awayTeamStats,
-      homePitcher: mockGame?.homePitcher,
-      awayPitcher: mockGame?.awayPitcher,
-      scoringBreakdown: mockGame?.scoringBreakdown,
-    });
-  });
+      // Get real team IDs and stats for both teams
+      const homeTeamName = mlbGame.teams.home.team.name;
+      const awayTeamName = mlbGame.teams.away.team.name;
+
+      // Try to get team IDs from MLB API or use provided IDs
+      let homeTeamId: number | null = mlbGame.teams.home.team.id || null;
+      let awayTeamId: number | null = mlbGame.teams.away.team.id || null;
+
+      if (!homeTeamId) {
+        homeTeamId = await getTeamIdByName(homeTeamName);
+      }
+      if (!awayTeamId) {
+        awayTeamId = await getTeamIdByName(awayTeamName);
+      }
+
+      // Fetch real team statistics
+      const homeTeamStats = await getTeamStatsById(homeTeamId, homeTeamName);
+      const awayTeamStats = await getTeamStatsById(awayTeamId, awayTeamName);
+
+      return transformScheduleGame(mlbGame, {
+        runScore: mockGame?.runScore,
+        thresholds: mockGame?.thresholds,
+        homeTeamStats: homeTeamStats || mockGame?.homeTeamStats,
+        awayTeamStats: awayTeamStats || mockGame?.awayTeamStats,
+        homePitcher: mockGame?.homePitcher,
+        awayPitcher: mockGame?.awayPitcher,
+        scoringBreakdown: mockGame?.scoringBreakdown,
+      });
+    })
+  );
 }

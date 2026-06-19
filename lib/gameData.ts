@@ -22,8 +22,8 @@ export async function getTodayGames(): Promise<Game[]> {
     }
 
     // Transform MLB games to our Game interface
-    // Blend real schedule with mock scoring data
-    const transformedGames = transformScheduleGames(mlbGames, mockGames);
+    // Blend real schedule with real team stats + mock scoring data
+    const transformedGames = await transformScheduleGames(mlbGames, mockGames);
 
     // Ensure all games have required fields (fill missing with mock if needed)
     const enrichedGames = transformedGames.map((game, index) => {
