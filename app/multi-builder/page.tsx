@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { Game } from '@/lib/mockData';
+import { formatEasternTimestamp, easternDayAndHour } from '@/lib/clientTime';
 
 export default function MultiBuilder() {
   const [selectedThreshold, setSelectedThreshold] = useState<'over55' | 'over65' | 'over75' | 'over85'>('over55');
@@ -10,25 +11,47 @@ export default function MultiBuilder() {
   const [games, setGames] = useState<Game[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [fetchedAt, setFetchedAt] = useState<Date | null>(null);
+  // Eastern day (YYYY-MM-DD) we've already done the post-9:00 AM ET refresh for.
+  const refreshedDayRef = useRef<string | null>(null);
 
-  // Fetch today's real games from the API on mount
-  useEffect(() => {
-    async function fetchGames() {
-      try {
-        const response = await fetch('/api/games/today');
-        if (!response.ok) throw new Error(`Request failed: ${response.status}`);
-        const data = await response.json();
-        setGames(Array.isArray(data) ? data : []);
-      } catch (err) {
-        console.error('Failed to fetch games:', err);
-        setError(true);
-        setGames([]);
-      } finally {
-        setLoading(false);
-      }
+  const fetchGames = useCallback(async () => {
+    try {
+      // no-store: always pull the current Eastern-day slate, never the
+      // browser's cached copy of a previous day's response.
+      const response = await fetch('/api/games/today', { cache: 'no-store' });
+      if (!response.ok) throw new Error(`Request failed: ${response.status}`);
+      const data = await response.json();
+      setGames(Array.isArray(data) ? data : []);
+      setError(false);
+      setFetchedAt(new Date());
+    } catch (err) {
+      console.error('Failed to fetch games:', err);
+      setError(true);
+      setGames([]);
+    } finally {
+      setLoading(false);
     }
-    fetchGames();
   }, []);
+
+  // Fetch on mount, then poll so a page left open overnight automatically
+  // refetches once it's 9:00 AM ET. Only one refresh per Eastern day.
+  useEffect(() => {
+    fetchGames();
+
+    const { day, hour } = easternDayAndHour();
+    if (hour >= 9) refreshedDayRef.current = day; // already past 9 AM ET on load
+
+    const interval = setInterval(() => {
+      const { day, hour } = easternDayAndHour();
+      if (hour >= 9 && refreshedDayRef.current !== day) {
+        refreshedDayRef.current = day;
+        fetchGames();
+      }
+    }, 2 * 60 * 1000); // check every 2 minutes
+
+    return () => clearInterval(interval);
+  }, [fetchGames]);
 
   // Sort games by selected threshold
   const sortedGames = useMemo(() => {
@@ -108,6 +131,9 @@ export default function MultiBuilder() {
 
         <div className="mb-6">
           <h1 className="text-3xl font-black text-white">Parlay Builder</h1>
+          {fetchedAt && (
+            <p className="text-gray-400 text-sm">{`Fetched ${formatEasternTimestamp(fetchedAt)}`}</p>
+          )}
         </div>
 
         {loading && (

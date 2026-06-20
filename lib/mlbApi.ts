@@ -4,6 +4,28 @@
 
 const MLB_API_BASE = 'https://statsapi.mlb.com/api/v1';
 
+/**
+ * Get "today's" date as YYYY-MM-DD in U.S. Eastern Time (America/New_York).
+ *
+ * MLB and U.S. sportsbooks roll their daily slate on Eastern Time, so the
+ * schedule day MUST be derived from Eastern — never from UTC or the host's
+ * local timezone. Using `new Date().toISOString()` (UTC) would request the
+ * wrong day for the ~8pm-midnight ET window (when UTC has already rolled to
+ * the next calendar day), which is the source of "showing the wrong day".
+ *
+ * `Intl.DateTimeFormat('en-CA', ...)` emits an ISO-style `YYYY-MM-DD` string,
+ * and pinning `timeZone: 'America/New_York'` makes the result independent of
+ * the user's location, the local machine TZ, and the Vercel server/region TZ.
+ */
+export function getEasternDate(date: Date = new Date()): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/New_York',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(date);
+}
+
 export interface MLBGame {
   gamePk: string | number;
   teams: {
@@ -72,12 +94,17 @@ export interface MLBGameResult {
  */
 export async function getSchedule(dateStr?: string): Promise<MLBGame[]> {
   try {
-    // Use provided date or today's date
-    const date = dateStr || new Date().toISOString().split('T')[0];
-    
+    // Use provided date or today's date in U.S. Eastern Time (MLB's schedule day).
+    const date = dateStr || getEasternDate();
+
+    console.log(`[MLB API] Requesting schedule for date=${date} (America/New_York)`);
+
+    // Never cache the schedule fetch: the daily slate must reflect the current
+    // Eastern day on every request, so we opt out of Next's Data Cache (no
+    // stale-while-revalidate) rather than serving a previously-fetched day.
     const response = await fetch(
       `${MLB_API_BASE}/schedule?sportId=1&date=${date}&hydrate=probablePitcher`,
-      { next: { revalidate: 3600 } } // Cache for 1 hour
+      { cache: 'no-store' }
     );
 
     if (!response.ok) {

@@ -1,6 +1,12 @@
 import { NextResponse } from 'next/server';
 import { getTodayGames } from '@/lib/gameData';
 
+// Always run this handler at request time. This guarantees the "today" date is
+// recomputed (in Eastern Time) on every request and the route is never frozen
+// to a build-time day, so a deployed instance shows the correct slate each day
+// without needing a redeploy.
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/games/today
  * Fetch today's MLB schedule and blend with mock scoring data
